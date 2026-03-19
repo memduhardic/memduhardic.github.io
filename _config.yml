@@ -24,13 +24,13 @@ repository               : "academicpages/academicpages.github.io"
 author:
   # Biographic information
   avatar           : "profile.png"
-  name             : "Your Sidebar Name"
+  name             : "Memduh Ardic"
   pronouns         : # example: "she/her"  
   bio              : "Short biography for the left-hand sidebar"
-  location         : "Earth"
-  employer         : "Red Brick University"
+  location         : "Ankara, Turkey"
+  employer         : "NFB Engineering and Consulting Inc."
   uri              : # URL
-  email            : "none@example.org" 
+  email            : "memduhardic@gmail.com" 
 
   # Academic websites
   academia         : # URL
