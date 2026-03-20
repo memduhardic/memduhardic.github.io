@@ -9,7 +9,7 @@
 
 main:
   - title: "Publications"
-    url: /files/cv.pdf
+    url: /publications/
 
   #- title: "Talks"
   #  url: /talks/    
@@ -24,7 +24,7 @@ main:
     url: /year-archive/
     
   - title: "CV"
-    url: /cv/
+    url: /files/cv.pdf
     
   # - title: "CV"
   #   url: /cv-json/
