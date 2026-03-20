@@ -2,7 +2,6 @@
 title: "Investigation of a Type of the Local Grid Refinement in the Model Harbour"
 collection: publications
 category: conferences
-permalink: /publication/2021-local-grid-refinement
 date: 2021-01-01
 venue: "Middle East International Conference On Contemporary Scientific Studies-V"
 location: "Ankara, Turkey"
