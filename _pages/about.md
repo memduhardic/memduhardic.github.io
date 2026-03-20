@@ -1,6 +1,6 @@
 ---
 permalink: /
-title: "Hi, I'm Memduh."
+title: "Hi there, I'm Memduh."
 author_profile: true
 redirect_from: 
   - /about/
