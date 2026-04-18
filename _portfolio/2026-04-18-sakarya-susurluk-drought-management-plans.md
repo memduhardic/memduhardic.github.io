@@ -1,10 +1,10 @@
 ---
-title: "Drought Management Plans for Yeşilırmak and Bati Karadeniz Basins"
-excerpt: "Contributed to basin-scale drought management planning through drought analysis, water use assessment, risk evaluation, and development of mitigation measures and action plans.<br/><img src='/images/yesilirmak-bati-karadeniz-drought-plan-cover.jpg'>"
+title: "Drought Management Plans for Sakarya and Susurluk Basins"
+excerpt: "Contributed to basin-scale drought management planning through drought analysis, water use assessment, risk evaluation, and development of mitigation measures and action plans.<br/><img src='/images/sakarya-susurluk-drought-plan-cover.jpg'>"
 collection: portfolio
 ---
 
-This project focused on the preparation of **Drought Management Plans for the Yeşilırmak and Bati Karadeniz Basins**. The work involved supporting basin-scale drought planning studies by assessing hydrological, meteorological, and agricultural drought conditions, evaluating water availability and sectoral water use, and contributing to the development of mitigation measures and action plans.
+This project focused on the preparation of **Drought Management Plans for the Sakarya and Susurluk Basins**. The work involved supporting basin-scale drought planning studies by assessing hydrological, meteorological, and agricultural drought conditions, evaluating water availability and sectoral water use, and contributing to the development of mitigation measures and action plans.
 
 The project aimed to strengthen drought resilience at basin scale by identifying vulnerabilities, improving preparedness, and supporting sustainable water resources management under drought conditions.
 
@@ -16,10 +16,13 @@ The project aimed to strengthen drought resilience at basin scale by identifying
 - Supported the overall preparation of drought management planning outputs
 
 **Scope**
-- Yeşilırmak Basin
-- Bati Karadeniz Basin
+- Sakarya Basin
+- Susurluk Basin
 
 **Type**
 - River Basin Planning
 - Drought Management
 - Water Resources Management
+
+**End Recipient**
+- DGWM (Directorate General of Water Management, Ministry of Agriculture and Forestry Turkey)

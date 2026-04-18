@@ -23,3 +23,6 @@ The project aimed to strengthen drought resilience at basin scale by identifying
 - River Basin Planning
 - Drought Management
 - Water Resources Management
+
+**End Recipient**
+- DGWM (Directorate General of Water Management, Ministry of Agriculture and Forestry Turkey)
