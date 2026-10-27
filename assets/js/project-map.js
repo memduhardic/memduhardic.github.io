@@ -1,7 +1,8 @@
 /*
  * Project map for the homepage (AcademicPages theme).
  * MapLibre GL with self-hosted Natural Earth layers: no tile server, no API key.
- * Optional layer: assets/data/tr-basins.geojson (Türkiye's river basins, `name` property).
+ * Türkiye's 25 river basins come from assets/data/tr-basins.geojson (`name` property).
+ * Basins named in a portfolio page's `places:` are coloured and clickable.
  */
 (function () {
   "use strict";
@@ -23,7 +24,11 @@
     return;
   }
 
-  // ---------- colours taken from the site theme (light / dark toggle) ------
+  // ---------- colours -------------------------------------------------------
+  // One hue per basin you have worked in; light and dark variants.
+  var HUES_LIGHT = ["#2f7f93", "#e0a458", "#6aa56e", "#c4706a", "#5b8fd1", "#9a7cc4", "#3fa7a0", "#d1b048", "#8a6d55", "#d38ab0"];
+  var HUES_DARK  = ["#58b4c9", "#f0b86c", "#86c48a", "#e08c86", "#7eaaf0", "#b69be0", "#5ccbc3", "#e8c766", "#b8977b", "#eaa3c6"];
+
   function parse(c) {
     c = (c || "").trim();
     var h = c.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
@@ -38,20 +43,24 @@
     var x = parse(a), y = parse(b);
     return "rgb(" + x.map(function (v, i) { return Math.round(v * (1 - t) + y[i] * t); }).join(",") + ")";
   }
+  function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
   function palette() {
     var cs = getComputedStyle(document.documentElement);
     function v(n, d) { return cs.getPropertyValue(n).trim() || d; }
     var bg = getComputedStyle(document.body).backgroundColor || "#ffffff";
     var basec = v("--global-base-color", "#2f7f93");
-    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    var text = v("--global-text-color", "#494e52");
+    var dark = isDark();
     return {
       land: bg,
       sea: mix(bg, basec, dark ? 0.18 : 0.12),
       border: v("--global-border-color", "#e3e5e6"),
+      basinLine: mix(bg, text, dark ? 0.4 : 0.45),
       river: v("--global-link-color", "#52adc8"),
       point: dark ? v("--global-link-color", "#52adc8") : basec,
       stroke: bg,
-      ring: v("--global-text-color", "#494e52")
+      ink: text,
+      hues: dark ? HUES_DARK : HUES_LIGHT
     };
   }
   var C = palette();
@@ -69,7 +78,7 @@
   var map = new maplibregl.Map({
     container: mapEl,
     style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": C.sea } }] },
-    center: [34, 39],
+    center: [35, 39],
     zoom: 4.5,
     minZoom: 2,
     maxZoom: 9,
@@ -86,24 +95,58 @@
     customAttribution: 'Base map: <a href="https://www.naturalearthdata.com/">Natural Earth</a>'
   }), "bottom-right");
 
-  var work, popup;
+  var work, popup, basinsGeo = null, worked = [], byBasin = {}, selected = -1;
   var buttons = Array.prototype.slice.call(root.querySelectorAll("[data-item]"));
-  var PAD = { top: 40, bottom: 40, left: 40, right: 60 };
+  var PAD = { top: 30, bottom: 30, left: 30, right: 60 };
 
-  function allCoords(list) {
+  // Hover label (HTML, so no font server is needed)
+  var tip = document.createElement("div");
+  tip.className = "pmap__tip";
+  mapEl.appendChild(tip);
+
+  function itemCoords(list) {
     var cs = [];
     list.forEach(function (it) { (it.places || []).forEach(function (p) { cs.push([p.lon, p.lat]); }); });
     return cs;
   }
-  function fit(cs, animate) {
-    var b = new maplibregl.LngLatBounds();
-    cs.forEach(function (c) { b.extend(c); });
+  function featureBounds(names) {
+    var b = new maplibregl.LngLatBounds(), any = false;
+    (basinsGeo ? basinsGeo.features : []).forEach(function (f) {
+      if (names.indexOf(f.properties.name) < 0) return;
+      var g = f.geometry, polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+      polys.forEach(function (poly) { poly[0].forEach(function (c) { b.extend(c); any = true; }); });
+    });
+    return any ? b : null;
+  }
+  function fitTo(item, animate) {
+    var names = item ? item.places.map(function (p) { return p.name; }) : worked;
+    var b = featureBounds(names);
+    if (!b) {
+      b = new maplibregl.LngLatBounds();
+      itemCoords(item ? [item] : work.items).forEach(function (c) { b.extend(c); });
+    }
+    if (!item && basinsGeo) b = featureBounds(basinsGeo.features.map(function (f) { return f.properties.name; }));
     map.fitBounds(b, { padding: PAD, maxZoom: 6.5, duration: animate && !reduce ? 900 : 0 });
   }
-  function openPopup(i, coords, place) {
+
+  function projectList(name) {
+    return (byBasin[name] || []).map(function (i) {
+      var it = work.items[i];
+      return '<li><a href="' + esc(it.url) + '">' + esc(it.title) + "</a></li>";
+    }).join("");
+  }
+  function openBasinPopup(name, lngLat) {
+    if (popup) popup.remove();
+    popup = new maplibregl.Popup({ closeButton: true, maxWidth: "290px", offset: 6, className: "pmap__pop" })
+      .setLngLat(lngLat)
+      .setHTML('<p class="pmap__place">River basin</p><p class="pmap__title">' + esc(name) + " Basin</p>" +
+        '<ul class="pmap__projects">' + projectList(name) + "</ul>")
+      .addTo(map);
+  }
+  function openItemPopup(i, coords, place) {
     var it = work.items[i];
     if (popup) popup.remove();
-    popup = new maplibregl.Popup({ closeButton: true, maxWidth: "280px", offset: 10, className: "pmap__pop" })
+    popup = new maplibregl.Popup({ closeButton: true, maxWidth: "290px", offset: 10, className: "pmap__pop" })
       .setLngLat(coords)
       .setHTML('<p class="pmap__place">' + esc(place) + " Basin</p>" +
         '<p class="pmap__title">' + esc(it.title) + "</p>" +
@@ -111,13 +154,35 @@
         '<a href="' + esc(it.url) + '">Read about the project</a>')
       .addTo(map);
   }
+
+  function hueExpr() {
+    var e = ["match", ["get", "name"]];
+    worked.forEach(function (n, k) { e.push(n, C.hues[k % C.hues.length]); });
+    e.push(C.basinLine);
+    return e;
+  }
+  function opacityExpr() {
+    if (selected < 0) return ["case", ["in", ["get", "name"], ["literal", worked]], 0.42, 0.1];
+    var names = work.items[selected].places.map(function (p) { return p.name; });
+    return ["case",
+      ["in", ["get", "name"], ["literal", names]], 0.7,
+      ["in", ["get", "name"], ["literal", worked]], 0.14, 0.06];
+  }
+
   function select(i, zoom) {
-    map.setFilter("pts-active", ["==", ["get", "i"], i]);
+    selected = i;
     buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(+b.getAttribute("data-item") === i)); });
-    if (!zoom) return;
+    if (map.getLayer("basins-fill")) {
+      map.setPaintProperty("basins-fill", "fill-opacity", opacityExpr());
+      var names = i >= 0 ? work.items[i].places.map(function (p) { return p.name; }) : [];
+      map.setFilter("basins-active", ["in", ["get", "name"], ["literal", names]]);
+    }
+    if (map.getLayer("pts-active")) map.setFilter("pts-active", ["==", ["get", "i"], i]);
+    if (!zoom || i < 0) return;
     var it = work.items[i];
-    fit(allCoords([it]), true);
-    openPopup(i, [it.places[0].lon, it.places[0].lat], it.places[0].name);
+    fitTo(it, true);
+    if (basinsGeo) { if (popup) popup.remove(); }
+    else openItemPopup(i, [it.places[0].lon, it.places[0].lat], it.places[0].name);
   }
 
   function applyColours() {
@@ -128,11 +193,13 @@
     set("lakes", "fill-color", C.sea);
     set("borders", "line-color", C.border);
     set("rivers", "line-color", C.river);
-    set("basins-fill", "fill-color", C.point);
-    set("basins-line", "line-color", C.border);
+    set("basins-fill", "fill-color", hueExpr());
+    set("basins-line", "line-color", C.basinLine);
+    set("basins-active", "line-color", C.ink);
+    set("basins-hover", "line-color", C.ink);
     set("pts", "circle-color", C.point);
     set("pts", "circle-stroke-color", C.stroke);
-    set("pts-active", "circle-stroke-color", C.ring);
+    set("pts-active", "circle-stroke-color", C.ink);
   }
 
   map.on("load", function () {
@@ -145,12 +212,11 @@
       getJSON(base + "/assets/data/tr-basins.geojson").catch(function () { return null; })
     ]).then(function (r) {
       work = r[0];
-      var feats = [], names = [];
+      basinsGeo = r[5];
       work.items.forEach(function (it, i) {
         (it.places || []).forEach(function (p) {
-          names.push(p.name);
-          feats.push({ type: "Feature", properties: { i: i, place: p.name },
-            geometry: { type: "Point", coordinates: [p.lon, p.lat] } });
+          if (worked.indexOf(p.name) < 0) worked.push(p.name);
+          (byBasin[p.name] = byBasin[p.name] || []).push(i);
         });
       });
 
@@ -158,39 +224,76 @@
       map.addSource("borders", { type: "geojson", data: r[2] });
       map.addSource("rivers", { type: "geojson", data: r[3] });
       map.addSource("lakes", { type: "geojson", data: r[4] });
-      map.addSource("pts", { type: "geojson", data: { type: "FeatureCollection", features: feats } });
-
       map.addLayer({ id: "land", type: "fill", source: "land", paint: { "fill-color": C.land } });
-      map.addLayer({ id: "lakes", type: "fill", source: "lakes", paint: { "fill-color": C.sea } });
-      if (r[5]) {
-        map.addSource("basins", { type: "geojson", data: r[5] });
+
+      if (basinsGeo) {
+        map.addSource("basins", { type: "geojson", data: basinsGeo, promoteId: "name" });
         map.addLayer({ id: "basins-fill", type: "fill", source: "basins",
-          filter: ["in", ["get", "name"], ["literal", names]],
-          paint: { "fill-color": C.point, "fill-opacity": 0.12 } });
-        map.addLayer({ id: "basins-line", type: "line", source: "basins",
-          paint: { "line-color": C.border, "line-width": 0.8 } });
+          paint: { "fill-color": hueExpr(), "fill-opacity": opacityExpr(),
+            "fill-opacity-transition": { duration: reduce ? 0 : 300 } } });
       }
-      map.addLayer({ id: "borders", type: "line", source: "borders", paint: { "line-color": C.border, "line-width": 0.8 } });
+      map.addLayer({ id: "lakes", type: "fill", source: "lakes", paint: { "fill-color": C.sea } });
       map.addLayer({ id: "rivers", type: "line", source: "rivers",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": C.river, "line-opacity": 0.6,
+        paint: { "line-color": C.river, "line-opacity": 0.55,
           "line-width": ["interpolate", ["linear"], ["zoom"],
             3, ["interpolate", ["linear"], ["get", "r"], 1, 1.4, 12, 0.3],
             7, ["interpolate", ["linear"], ["get", "r"], 1, 3, 12, 0.9]] } });
-      map.addLayer({ id: "pts", type: "circle", source: "pts",
-        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 5, 7, 8],
-          "circle-color": C.point, "circle-stroke-color": C.stroke, "circle-stroke-width": 2 } });
-      map.addLayer({ id: "pts-active", type: "circle", source: "pts", filter: ["==", ["get", "i"], -1],
-        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 9, 7, 13],
-          "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": C.ring, "circle-stroke-width": 2 } });
+      map.addLayer({ id: "borders", type: "line", source: "borders", paint: { "line-color": C.border, "line-width": 0.8 } });
 
-      map.on("click", "pts", function (e) {
-        var f = e.features[0];
-        select(f.properties.i, false);
-        openPopup(f.properties.i, f.geometry.coordinates, f.properties.place);
-      });
-      map.on("mouseenter", "pts", function () { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "pts", function () { map.getCanvas().style.cursor = ""; });
+      if (basinsGeo) {
+        map.addLayer({ id: "basins-line", type: "line", source: "basins",
+          paint: { "line-color": C.basinLine, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.9, 7, 1.4] } });
+        map.addLayer({ id: "basins-hover", type: "line", source: "basins", filter: ["==", ["get", "name"], ""],
+          paint: { "line-color": C.ink, "line-width": 1.6 } });
+        map.addLayer({ id: "basins-active", type: "line", source: "basins", filter: ["in", ["get", "name"], ["literal", []]],
+          paint: { "line-color": C.ink, "line-width": 2 } });
+
+        map.on("mousemove", "basins-fill", function (e) {
+          var name = e.features[0].properties.name;
+          var isWorked = worked.indexOf(name) >= 0;
+          map.getCanvas().style.cursor = isWorked ? "pointer" : "";
+          map.setFilter("basins-hover", ["==", ["get", "name"], name]);
+          tip.textContent = name + (isWorked ? "" : "");
+          tip.style.transform = "translate(" + (e.point.x + 12) + "px," + (e.point.y + 12) + "px)";
+          tip.classList.add("is-on");
+          tip.classList.toggle("is-worked", isWorked);
+        });
+        map.on("mouseleave", "basins-fill", function () {
+          map.getCanvas().style.cursor = "";
+          map.setFilter("basins-hover", ["==", ["get", "name"], ""]);
+          tip.classList.remove("is-on");
+        });
+        map.on("click", "basins-fill", function (e) {
+          var name = e.features[0].properties.name;
+          if (worked.indexOf(name) < 0) return;
+          tip.classList.remove("is-on");
+          openBasinPopup(name, e.lngLat);
+        });
+      } else {
+        // No basin file: fall back to points
+        var feats = [];
+        work.items.forEach(function (it, i) {
+          (it.places || []).forEach(function (p) {
+            feats.push({ type: "Feature", properties: { i: i, place: p.name },
+              geometry: { type: "Point", coordinates: [p.lon, p.lat] } });
+          });
+        });
+        map.addSource("pts", { type: "geojson", data: { type: "FeatureCollection", features: feats } });
+        map.addLayer({ id: "pts", type: "circle", source: "pts",
+          paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 5, 7, 8],
+            "circle-color": C.point, "circle-stroke-color": C.stroke, "circle-stroke-width": 2 } });
+        map.addLayer({ id: "pts-active", type: "circle", source: "pts", filter: ["==", ["get", "i"], -1],
+          paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 9, 7, 13],
+            "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": C.ink, "circle-stroke-width": 2 } });
+        map.on("click", "pts", function (e) {
+          var f = e.features[0];
+          select(f.properties.i, false);
+          openItemPopup(f.properties.i, f.geometry.coordinates, f.properties.place);
+        });
+        map.on("mouseenter", "pts", function () { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "pts", function () { map.getCanvas().style.cursor = ""; });
+      }
 
       buttons.forEach(function (b) {
         b.addEventListener("click", function (ev) { ev.preventDefault(); select(+b.getAttribute("data-item"), true); });
@@ -199,10 +302,25 @@
       if (reset) reset.addEventListener("click", function () {
         if (popup) popup.remove();
         select(-1, false);
-        fit(allCoords(work.items), true);
+        fitTo(null, true);
       });
 
-      fit(allCoords(work.items), false);
+      fitTo(null, false);
+
+      // The theme can still be settling its layout after load: keep the map sized
+      // and re-fit the overview until the visitor moves the map themselves.
+      var touched = false;
+      map.on("dragstart", function () { touched = true; });
+      map.on("zoomstart", function (e) { if (e.originalEvent) touched = true; });
+      if ("ResizeObserver" in window) {
+        var lastW = mapEl.clientWidth;
+        new ResizeObserver(function () {
+          if (mapEl.clientWidth === lastW) return;
+          lastW = mapEl.clientWidth;
+          map.resize();
+          if (!touched && selected < 0) fitTo(null, false);
+        }).observe(mapEl);
+      }
     }).catch(function () {
       fail("The map data could not be loaded. The project links below still work.");
     });
