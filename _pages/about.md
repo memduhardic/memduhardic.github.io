@@ -18,6 +18,12 @@ My research and professional interests focus on:
 
 I work on developing reproducible modeling workflows that combine physical process-based models with modern data-driven approaches. My projects often involve hydrological modeling, hydrodynamic simulations, water quality analysis, and geospatial data processing.
 
+Where I've worked
+======
+The river basins behind the projects in my [portfolio](/portfolio/). Click a point or a project name to zoom in.
+
+{% include project-map.html %}
+
 Research & Professional Focus
 ======
 This website presents my academic publications, conference contributions, technical projects, and selected modeling workflows. 
