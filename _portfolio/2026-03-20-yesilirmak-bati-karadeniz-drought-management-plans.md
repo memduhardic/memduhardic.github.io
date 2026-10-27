@@ -2,7 +2,7 @@
 title: "Drought Management Plans for Yeşilırmak and Bati Karadeniz Basins"
 excerpt: "Contributed to basin-scale drought management planning through drought analysis, water use assessment, risk evaluation, and development of mitigation measures and action plans.<br/><img src='/images/yesilirmak-bati-karadeniz-drought-plan-cover.jpg'>"
 collection: portfolio
-map_label: Yeşilırmak and Batı Karadeniz drought plans
+map_label: Yeşilırmak and Batı Karadeniz Drought Plans
 places:
   - { name: Yeşilırmak, lon: 36.5, lat: 40.4 }
   - { name: Batı Karadeniz, lon: 32.6, lat: 41.25 }

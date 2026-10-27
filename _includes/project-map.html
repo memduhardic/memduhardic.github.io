@@ -44,6 +44,12 @@
   .pmap__tip.is-on { opacity: 0.95; }
   .pmap__tip.is-worked { font-weight: bold; }
   .pmap__projects { margin: 0.2em 0 0; padding-left: 1.1em; font-size: 0.8rem; }
+  .pmap__label {
+    font-family: inherit; font-size: 0.72rem; font-weight: bold; line-height: 1.2; white-space: nowrap; cursor: pointer;
+    padding: 0.25em 0.5em; border-radius: 3px; border: 1px solid var(--global-border-color);
+    background: var(--global-bg-color); color: var(--global-text-color);
+  }
+  .pmap__label:hover { border-color: var(--global-base-color); }
   .pmap__projects li { margin: 0.25em 0; }
   html[data-theme="dark"] .pmap .maplibregl-ctrl-group { background: var(--global-bg-color); }
   html[data-theme="dark"] .pmap .maplibregl-ctrl-icon,

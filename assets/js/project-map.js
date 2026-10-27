@@ -2,7 +2,9 @@
  * Project map for the homepage (AcademicPages theme).
  * MapLibre GL with self-hosted Natural Earth layers: no tile server, no API key.
  * Türkiye's 25 river basins come from assets/data/tr-basins.geojson (`name` property).
- * Basins named in a portfolio page's `places:` are coloured and clickable.
+ * Basins named in a portfolio page's `places:` are coloured and clickable;
+ * places that are not a Turkish basin (e.g. Ribble Estuary) are drawn as points.
+ * On load the map zooms to fit every project, so new projects are always in view.
  */
 (function () {
   "use strict";
@@ -80,7 +82,8 @@
     style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": C.sea } }] },
     center: [35, 39],
     zoom: 4.5,
-    minZoom: 2,
+    minZoom: 1,
+    renderWorldCopies: false,
     maxZoom: 9,
     dragRotate: false,
     pitchWithRotate: false,
@@ -95,9 +98,9 @@
     customAttribution: 'Base map: <a href="https://www.naturalearthdata.com/">Natural Earth</a>'
   }), "bottom-right");
 
-  var work, popup, basinsGeo = null, worked = [], byBasin = {}, selected = -1;
+  var work, popup, basinsGeo = null, basinNames = [], worked = [], byBasin = {}, selected = -1;
   var buttons = Array.prototype.slice.call(root.querySelectorAll("[data-item]"));
-  var PAD = { top: 30, bottom: 30, left: 30, right: 60 };
+  var PAD = { top: 40, bottom: 30, left: 30, right: 110 };
 
   // Hover label (HTML, so no font server is needed)
   var tip = document.createElement("div");
@@ -119,14 +122,17 @@
     return any ? b : null;
   }
   function fitTo(item, animate) {
-    var names = item ? item.places.map(function (p) { return p.name; }) : worked;
-    var b = featureBounds(names);
-    if (!b) {
-      b = new maplibregl.LngLatBounds();
-      itemCoords(item ? [item] : work.items).forEach(function (c) { b.extend(c); });
-    }
-    if (!item && basinsGeo) b = featureBounds(basinsGeo.features.map(function (f) { return f.properties.name; }));
-    map.fitBounds(b, { padding: PAD, maxZoom: 6.5, duration: animate && !reduce ? 900 : 0 });
+    var items = item ? [item] : work.items;
+    var names = [], pts = [];
+    items.forEach(function (it) {
+      (it.places || []).forEach(function (p) {
+        if (basinNames.indexOf(p.name) >= 0) names.push(p.name); else pts.push([p.lon, p.lat]);
+      });
+    });
+    var b = featureBounds(names) || new maplibregl.LngLatBounds();
+    pts.forEach(function (c) { b.extend(c); });
+    if (b.isEmpty()) return;
+    map.fitBounds(b, { padding: PAD, maxZoom: names.length ? 6.5 : 5, duration: animate && !reduce ? 900 : 0 });
   }
 
   function projectList(name) {
@@ -148,7 +154,7 @@
     if (popup) popup.remove();
     popup = new maplibregl.Popup({ closeButton: true, maxWidth: "290px", offset: 10, className: "pmap__pop" })
       .setLngLat(coords)
-      .setHTML('<p class="pmap__place">' + esc(place) + " Basin</p>" +
+      .setHTML('<p class="pmap__place">' + esc(place) + (basinNames.indexOf(place) >= 0 ? " Basin" : "") + "</p>" +
         '<p class="pmap__title">' + esc(it.title) + "</p>" +
         "<p>" + esc(it.summary) + "</p>" +
         '<a href="' + esc(it.url) + '">Read about the project</a>')
@@ -181,8 +187,9 @@
     if (!zoom || i < 0) return;
     var it = work.items[i];
     fitTo(it, true);
-    if (basinsGeo) { if (popup) popup.remove(); }
-    else openItemPopup(i, [it.places[0].lon, it.places[0].lat], it.places[0].name);
+    if (popup) popup.remove();
+    var lone = it.places.filter(function (p) { return basinNames.indexOf(p.name) < 0; });
+    if (lone.length && lone.length === it.places.length) openItemPopup(i, [lone[0].lon, lone[0].lat], lone[0].name);
   }
 
   function applyColours() {
@@ -213,10 +220,17 @@
     ]).then(function (r) {
       work = r[0];
       basinsGeo = r[5];
+      basinNames = basinsGeo ? basinsGeo.features.map(function (f) { return f.properties.name; }) : [];
+      var feats = [];
       work.items.forEach(function (it, i) {
         (it.places || []).forEach(function (p) {
-          if (worked.indexOf(p.name) < 0) worked.push(p.name);
-          (byBasin[p.name] = byBasin[p.name] || []).push(i);
+          if (basinNames.indexOf(p.name) >= 0) {
+            if (worked.indexOf(p.name) < 0) worked.push(p.name);
+            (byBasin[p.name] = byBasin[p.name] || []).push(i);
+          } else {
+            feats.push({ type: "Feature", properties: { i: i, place: p.name },
+              geometry: { type: "Point", coordinates: [p.lon, p.lat] } });
+          }
         });
       });
 
@@ -270,30 +284,37 @@
           tip.classList.remove("is-on");
           openBasinPopup(name, e.lngLat);
         });
-      } else {
-        // No basin file: fall back to points
-        var feats = [];
-        work.items.forEach(function (it, i) {
-          (it.places || []).forEach(function (p) {
-            feats.push({ type: "Feature", properties: { i: i, place: p.name },
-              geometry: { type: "Point", coordinates: [p.lon, p.lat] } });
-          });
-        });
-        map.addSource("pts", { type: "geojson", data: { type: "FeatureCollection", features: feats } });
-        map.addLayer({ id: "pts", type: "circle", source: "pts",
-          paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 5, 7, 8],
-            "circle-color": C.point, "circle-stroke-color": C.stroke, "circle-stroke-width": 2 } });
-        map.addLayer({ id: "pts-active", type: "circle", source: "pts", filter: ["==", ["get", "i"], -1],
-          paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 9, 7, 13],
-            "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": C.ink, "circle-stroke-width": 2 } });
-        map.on("click", "pts", function (e) {
-          var f = e.features[0];
+      }
+
+      // Places that are not a Turkish basin: points
+      map.addSource("pts", { type: "geojson", data: { type: "FeatureCollection", features: feats } });
+      map.addLayer({ id: "pts", type: "circle", source: "pts",
+        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 7, 7, 10],
+          "circle-color": C.point, "circle-stroke-color": C.stroke, "circle-stroke-width": 2 } });
+      map.addLayer({ id: "pts-active", type: "circle", source: "pts", filter: ["==", ["get", "i"], -1],
+        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 9, 7, 13],
+          "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": C.ink, "circle-stroke-width": 2 } });
+      map.on("click", "pts", function (e) {
+        var f = e.features[0];
+        select(f.properties.i, false);
+        openItemPopup(f.properties.i, f.geometry.coordinates, f.properties.place);
+      });
+      map.on("mouseenter", "pts", function () { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "pts", function () { map.getCanvas().style.cursor = ""; });
+
+      // Name label next to each point (HTML, so no font server is needed)
+      feats.forEach(function (f) {
+        var el = document.createElement("button");
+        el.type = "button";
+        el.className = "pmap__label";
+        el.textContent = f.properties.place;
+        el.addEventListener("click", function () {
           select(f.properties.i, false);
           openItemPopup(f.properties.i, f.geometry.coordinates, f.properties.place);
         });
-        map.on("mouseenter", "pts", function () { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", "pts", function () { map.getCanvas().style.cursor = ""; });
-      }
+        new maplibregl.Marker({ element: el, anchor: "left", offset: [12, 0] })
+          .setLngLat(f.geometry.coordinates).addTo(map);
+      });
 
       buttons.forEach(function (b) {
         b.addEventListener("click", function (ev) { ev.preventDefault(); select(+b.getAttribute("data-item"), true); });
