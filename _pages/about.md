@@ -20,7 +20,7 @@ I work on developing reproducible modeling workflows that combine physical proce
 
 Where I've worked
 ======
-The river basins behind the projects in my [portfolio](/portfolio/). Click a point or a project name to zoom in.
+The coloured basins are the ones behind the projects in my [portfolio](/portfolio/). Click a basin, a point or a project name to see the work.
 
 {% include project-map.html %}
 

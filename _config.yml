@@ -27,18 +27,18 @@ author:
   name             : "Memduh Ardic"
   pronouns         : # example: "she/her"  
   bio              : "Environmental Modeling, Earth Observation and Machine Learning"
-  location         : "Ankara, Turkey"
-  employer         : "NFB Engineering and Consulting Inc."
+  location         : "Amsterdam, Netherlands"
+  employer         : # left empty on purpose
   uri              : # URL
   email            : "memduhardic@gmail.com" 
 
   # Academic websites
-  academia         : "https://gazi.academia.edu/MemduhArd%C4%B1%C3%A7"
+  academia         : #"https://gazi.academia.edu/MemduhArd%C4%B1%C3%A7"
   arxiv            : # URL - Update with the correct link to your profile
   googlescholar    : "https://scholar.google.com.tr/citations?hl=tr&user=7_D_E0UAAAAJ"
   inspire-hep      : # URL
   impactstory      : # URL
-  orcid            : "https://orcid.org/0000-0002-6340-9853"
+  orcid            : #"https://orcid.org/0000-0002-6340-9853"
   semantic         : # URL
   ssrn             : # URL
   pubmed           : #"https://www.ncbi.nlm.nih.gov/pubmed/?term=john+snow"
