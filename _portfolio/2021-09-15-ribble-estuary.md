@@ -1,6 +1,6 @@
 ---
 title: "Hydrodynamic and Water Quality Modelling of the Ribble Estuary (MSc)"
-excerpt: "MSc research on 3D tidal hydrodynamics, wetting and drying, and fecal coliform transport in the Ribble Estuary, using Delft3D, DIVAST and SWAN alongside my own numerical solvers.<br/><img src='/images/ribble.png'>"
+excerpt: "MSc research on 3D tidal hydrodynamics, wetting and drying, and fecal coliform transport in the Ribble Estuary, using Delft3D and DIVAST alongside my own numerical solvers.<br/><img src='/images/ribble.png'>"
 collection: portfolio
 date: 2021-09-15
 map_label: Ribble Estuary (MSc)
